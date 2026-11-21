@@ -1964,12 +1964,27 @@ if [[ $x264 != no ]] ||
         fi
 
         if [[ $standalone = y || $av1an = y ]]; then
+            # l-smash itself was emptied upstream in November 2026; the Vimeo
+            # fork needs obuparse for AV1
+            _check=("$LOCALDESTDIR"/opt/lightffmpeg/{lib/libobuparse.a,include/obuparse.h})
+            if do_vcs "$SOURCE_REPO_OBUPARSE"; then
+                do_uninstall "${_check[@]}"
+                log clean make clean
+                do_make CC="$CC" libobuparse.a
+                do_install libobuparse.a "$LOCALDESTDIR/opt/lightffmpeg/lib/"
+                do_install obuparse.h "$LOCALDESTDIR/opt/lightffmpeg/include/"
+                do_checkIfExist
+            fi
+
+            _deps=("$LOCALDESTDIR/opt/lightffmpeg/lib/libobuparse.a")
             _check=("$LOCALDESTDIR/opt/lightffmpeg/lib/pkgconfig/liblsmash.pc")
             if do_vcs "$SOURCE_REPO_LIBLSMASH" liblsmash; then
                 [[ -f config.mak ]] && log "distclean" make distclean
                 do_uninstall "${_check[@]}"
                 create_build_dir
-                log configure ../configure --prefix="$LOCALDESTDIR/opt/lightffmpeg"
+                log configure ../configure --prefix="$LOCALDESTDIR/opt/lightffmpeg" \
+                    --extra-cflags="-I$LOCALDESTDIR/opt/lightffmpeg/include" \
+                    --extra-ldflags="-L$LOCALDESTDIR/opt/lightffmpeg/lib"
                 do_make install-lib
                 do_checkIfExist
             fi
